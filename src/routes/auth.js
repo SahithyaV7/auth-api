@@ -1,9 +1,18 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 const { registerValidation, loginValidation } = require("../validators/authValidators");
 const validate = require("../middleware/validate");
 const { createUser, findUser } = require("../services/userService");
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts, try again later" },
+});
 
 const router = express.Router();
 
@@ -21,7 +30,7 @@ router.post("/register", registerValidation, validate, async (req, res, next) =>
   }
 });
 
-router.post("/login", loginValidation, validate, async (req, res, next) => {
+router.post("/login", loginLimiter, loginValidation, validate, async (req, res, next) => {
   const { username, password } = req.body;
   try {
     const user = await findUser(username);
