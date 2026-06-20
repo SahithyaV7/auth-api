@@ -5,11 +5,14 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "jest --runInBand --forceExit"
+    "test": "cross-env REDIS_URL=redis://localhost:6379/1 JWT_SECRET=test-secret NODE_ENV=test jest --runInBand --forceExit"
   },
   "jest": {
     "testEnvironment": "node",
     "globalSetup": "./tests/globalSetup.js",
+    "setupFiles": [
+      "./tests/setEnv.js"
+    ],
     "testTimeout": 15000
   },
   "keywords": [],
@@ -27,6 +30,7 @@
     "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "jest": "^30.4.2",
     "supertest": "^7.2.2"
   }
