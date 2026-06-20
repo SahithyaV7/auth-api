@@ -1,18 +1,19 @@
 /*
  * Security limitations and accepted tradeoffs:
  *
- * - No account lockout on failed logins. The rate limiter on /login reduces
- *   brute-force risk but does not fully replace a lockout mechanism.
+ * - No account lockout on failed logins. The rate limiter on /login (20 req
+ *   per 15 min) reduces brute-force risk but does not fully replace a lockout
+ *   mechanism — a determined attacker can still exhaust attempts over time.
  *
- * - JWTs are stateless and cannot be revoked before expiry. Mitigate by keeping
- *   access token TTL short and pairing with refresh tokens in production.
+ * - JWTs are stateless and cannot be revoked before expiry. The 1h TTL limits
+ *   the exposure window. For public-facing auth, pair with refresh token
+ *   rotation and a server-side blocklist.
  *
  * - Redis data is unencrypted at rest. Enable Redis AUTH and TLS before
  *   deploying to any environment that handles real credentials.
  *
- * - "User not found" and "wrong password" paths are constant-time via a dummy
- *   bcrypt.compare when no user is found, preventing username enumeration
- *   through response timing.
+ * - Username enumeration via response timing is mitigated: findUser runs a
+ *   dummy bcrypt.compare on the not-found path so both branches take ~300ms.
  */
 
 const bcrypt = require("bcrypt");
