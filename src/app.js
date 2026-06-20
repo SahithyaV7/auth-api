@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const helmet = require("helmet");
+require("./config/redis");
 
 const app = express();
 
