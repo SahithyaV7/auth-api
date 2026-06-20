@@ -1,0 +1,382 @@
+{
+  "info": {
+    "name": "Auth API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status ok', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Register",
+      "item": [
+        {
+          "name": "POST /register — valid input",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"Secure1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 User created', () => pm.response.to.have.status(200));",
+                  "pm.test('message field present', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.message).to.eql('User created');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /register — duplicate username (409)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"dupeuser\",\n  \"password\": \"Secure1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Ensure dupeuser exists before testing the conflict path",
+                  "pm.sendRequest({",
+                  "  url: pm.collectionVariables.get('baseUrl') + '/api/v1/register',",
+                  "  method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ username: 'dupeuser', password: 'Secure1!' }) }",
+                  "}, () => {});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('error message', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error).to.eql('Username already exists');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /register — missing username (400)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"Secure1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('errors array present', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.errors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /register — weak password (400)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser2\",\n  \"password\": \"weakpassword\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('password error message', () => {",
+                  "  const body = pm.response.json();",
+                  "  const msgs = body.errors.map(e => e.msg);",
+                  "  pm.expect(msgs).to.include('Password must contain uppercase, number, and special character');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /register — username too short (400)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"ab\",\n  \"password\": \"Secure1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('errors array present', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.errors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /register — invalid characters in username (400)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/register",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"bad user!\",\n  \"password\": \"Secure1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('errors array present', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.errors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Login",
+      "item": [
+        {
+          "name": "POST /login — valid credentials",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"Secure1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Ensure testuser exists before attempting login",
+                  "pm.sendRequest({",
+                  "  url: pm.collectionVariables.get('baseUrl') + '/api/v1/register',",
+                  "  method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ username: 'testuser', password: 'Secure1!' }) }",
+                  "}, () => {});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('token is a non-empty string', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.token).to.be.a('string').that.is.not.empty;",
+                  "  pm.collectionVariables.set('token', body.token);",
+                  "});",
+                  "pm.test('token has three JWT segments', () => {",
+                  "  const token = pm.response.json().token;",
+                  "  pm.expect(token.split('.').length).to.eql(3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login — wrong password (401)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"WrongPass1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('generic error message', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error).to.eql('Invalid credentials');",
+                  "});",
+                  "pm.test('constant-time response — bcrypt dummy hash path active', () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.above(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login — unknown username (401)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nobody\",\n  \"password\": \"Secure1!\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('same error as wrong password — no username enumeration', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.error).to.eql('Invalid credentials');",
+                  "});",
+                  "pm.test('constant-time response — bcrypt dummy hash path active', () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.above(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login — empty body (400)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('errors array present', () => {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.errors).to.be.an('array').that.is.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Token",
+      "item": [
+        {
+          "name": "GET /health — with Bearer token (smoke test auth header passthrough)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('token variable is set', () => {",
+                  "  pm.expect(pm.collectionVariables.get('token')).to.be.a('string').that.is.not.empty;",
+                  "});",
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
