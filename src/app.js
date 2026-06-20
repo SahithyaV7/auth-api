@@ -3,6 +3,7 @@ const express = require("express");
 const helmet = require("helmet");
 require("./config/redis");
 const authRouter = require("./routes/auth");
+const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
@@ -15,9 +16,6 @@ app.get("/health", (req, res) => {
 
 app.use("/api/v1", authRouter);
 
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: "Internal server error" });
-});
+app.use(errorHandler);
 
 module.exports = app;
