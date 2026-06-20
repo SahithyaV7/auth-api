@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const helmet = require("helmet");
 require("./config/redis");
+const authRouter = require("./routes/auth");
 
 const app = express();
 
@@ -11,5 +12,7 @@ app.use(express.json());
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
+
+app.use("/api/v1", authRouter);
 
 module.exports = app;
